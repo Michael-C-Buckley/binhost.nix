@@ -8,7 +8,7 @@
   );
 in
   mkDerivation {
-    pname = "sops-install-secrets-bin";
+    pname = "sops-install-secrets";
     version = "0.0.1";
     src = ./${hostPlatform.system}/sops-install-secrets;
 
