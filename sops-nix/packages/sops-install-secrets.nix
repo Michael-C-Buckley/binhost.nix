@@ -1,41 +1,32 @@
-{pkgs ? import <nixpkgs> {}}: let
-  inherit (pkgs.stdenv) mkDerivation hostPlatform;
+{pkgs ? import <nixpkgs> {}}:
+pkgs.stdenv.mkDerivation {
+  pname = "sops-install-secrets";
+  version = "0.0.1";
 
-  runtimeLibPath = pkgs.lib.makeLibraryPath (
-    with pkgs; [
-      glibc
-    ]
-  );
-in
-  mkDerivation {
-    pname = "sops-install-secrets";
-    version = "0.0.1";
-    src = ./${hostPlatform.system}/sops-install-secrets;
+  src = ./${pkgs.stdenv.hostPlatform.system}/sops-install-secrets;
 
-    nativeBuildInputs = [
-      pkgs.patchelf
-    ];
+  nativeBuildInputs = [
+    pkgs.autoPatchelfHook
+    pkgs.makeWrapper
+  ];
 
-    dontBuild = true;
-    dontConfigure = true;
-    dontUnpack = true;
-    dontCheck = true;
+  buildInputs = [pkgs.glibc];
 
-    installPhase =
-      # bash
-      ''
-        mkdir -p $out/bin
-        install -m755 $src $out/bin/sops-install-secrets
-        runHook postInstall
-      '';
+  dontBuild = true;
+  dontConfigure = true;
+  dontUnpack = true;
+  dontCheck = true;
 
-    postInstall =
-      # bash
-      ''
-        patchelf --set-interpreter ${pkgs.stdenv.cc.bintools.dynamicLinker} \
-          --set-rpath ${runtimeLibPath} \
-          $out/bin/sops-install-secrets
-      '';
+  installPhase = ''
+    mkdir -p $out/bin
+    install -m755 $src $out/bin/.sops-install-secrets-unwrapped
+    runHook postInstall
+  '';
 
-    meta.mainProgram = "sops-install-secrets";
-  }
+  postFixup = ''
+    makeWrapper $out/bin/.sops-install-secrets-unwrapped $out/bin/sops-install-secrets \
+      --set LD_LIBRARY_PATH ${pkgs.lib.makeLibraryPath [pkgs.glibc]}
+  '';
+
+  meta.mainProgram = "sops-install-secrets";
+}
